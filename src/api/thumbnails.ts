@@ -10,31 +10,6 @@ type Thumbnail = {
   mediaType: string;
 };
 
-const videoThumbnails: Map<string, Thumbnail> = new Map();
-
-export async function handlerGetThumbnail(cfg: ApiConfig, req: BunRequest) {
-  const { videoId } = req.params as { videoId?: string };
-  if (!videoId) {
-    throw new BadRequestError("Invalid video ID");
-  }
-
-  const video = getVideo(cfg.db, videoId);
-  if (!video) {
-    throw new NotFoundError("Couldn't find video");
-  }
-
-  const thumbnail = videoThumbnails.get(videoId);
-  if (!thumbnail) {
-    throw new NotFoundError("Thumbnail not found");
-  }
-
-  return new Response(thumbnail.data, {
-    headers: {
-      "Content-Type": thumbnail.mediaType,
-      "Cache-Control": "no-store",
-    },
-  });
-}
 
 export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
   const { videoId } = req.params as { videoId?: string };
@@ -59,13 +34,17 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
         throw new BadRequestError("File size exceeds 10MB");
   }
   const thumbnailData=await file.arrayBuffer();
+  const thumbnailBase64= Buffer.from(thumbnailData).toString("base64");
+
+  const dataURL=`data:image/png;base64,${thumbnailBase64}`;
+
+
   const thumbnailMediaType=await file.type;
   const video = getVideo(cfg.db, videoId);
   if(video?.userID!==userID){
     throw new UserForbiddenError("User not authenticated")
   }
-  videoThumbnails.set(videoId,{data:thumbnailData,mediaType:thumbnailMediaType})
-  const thumbnailURL=`http://localhost:8091/api/thumbnails/${videoId}`
+  const thumbnailURL=dataURL
   video.thumbnailURL=thumbnailURL;
   updateVideo(cfg.db,video)
 
