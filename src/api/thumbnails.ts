@@ -4,6 +4,8 @@ import { getVideo, updateVideo } from "../db/videos";
 import type { ApiConfig } from "../config";
 import type { BunRequest } from "bun";
 import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
+import { randomBytes } from "node:crypto";
+
 
 type Thumbnail = {
   data: ArrayBuffer;
@@ -35,7 +37,7 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
   }else if(file.type !== "image/jpeg" && file.type !== "image/png"){
     throw new BadRequestError("Only jpeg and png types allowed")
   }
-  const filePath=`${cfg.assetsRoot}/${videoId}.${file.type}`;
+  const filePath=`${cfg.assetsRoot}/${randomBytes(32).toString("base64url")}.${file.type}`;
   await Bun.write(filePath,file)
 
 
