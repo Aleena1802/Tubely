@@ -32,6 +32,8 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
   const MAX_UPLOAD_SIZE=10<<20;
   if(file.size>MAX_UPLOAD_SIZE){
         throw new BadRequestError("File size exceeds 10MB");
+  }else if(file.type !== "image/jpeg" && file.type !== "image/png"){
+    throw new BadRequestError("Only jpeg and png types allowed")
   }
   const filePath=`${cfg.assetsRoot}/${videoId}.${file.type}`;
   await Bun.write(filePath,file)
