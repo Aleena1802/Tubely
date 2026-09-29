@@ -33,20 +33,20 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
   if(file.size>MAX_UPLOAD_SIZE){
         throw new BadRequestError("File size exceeds 10MB");
   }
-  const thumbnailData=await file.arrayBuffer();
-  const thumbnailBase64= Buffer.from(thumbnailData).toString("base64");
-
-  const dataURL=`data:image/png;base64,${thumbnailBase64}`;
+  const filePath=`${cfg.assetsRoot}/${videoId}.${file.type}`;
+  await Bun.write(filePath,file)
 
 
-  const thumbnailMediaType=await file.type;
+
+  
   const video = getVideo(cfg.db, videoId);
   if(video?.userID!==userID){
     throw new UserForbiddenError("User not authenticated")
   }
-  const thumbnailURL=dataURL
-  video.thumbnailURL=thumbnailURL;
+
+  video.thumbnailURL=`http://localhost:${cfg.port}/${filePath}`
   updateVideo(cfg.db,video)
+
 
   return respondWithJSON(200, video);
 }
