@@ -7,6 +7,7 @@ import { getVideo, updateVideo } from "../db/videos";
 import { BadRequestError, UserForbiddenError } from "./errors";
 import { randomBytes } from "node:crypto";
 import { unlink } from "node:fs/promises";
+import { getVideoAspectRatio } from "./video-meta";
 
 export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   const MAX_UPLOAD_LIMIT = 1 << 30; //1GB
@@ -36,14 +37,15 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
 
   try {
     await Bun.write(filePath, file);
+    const aspectRatio=await getVideoAspectRatio(filePath)
 
-    const s3file: S3File = cfg.s3Client.file(`${videoId}.mp4`, {
+    const s3file: S3File = cfg.s3Client.file(`${aspectRatio}/${videoId}.mp4`, {
       type: "video/mp4",
     });
 
     await s3file.write(Bun.file(filePath));
 
-    video.videoURL = `https://${cfg.s3Bucket}.s3.${cfg.s3Region}.amazonaws.com/${videoId}.mp4`;
+    video.videoURL = `https://${cfg.s3Bucket}.s3.${cfg.s3Region}.amazonaws.com/${aspectRatio}/${videoId}.mp4`;
 
     await updateVideo(cfg.db, video);
   } finally {

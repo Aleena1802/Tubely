@@ -3,7 +3,7 @@ import { getBearerToken, validateJWT } from "../auth";
 import { createVideo, deleteVideo, getVideo, getVideos } from "../db/videos";
 import { respondWithJSON } from "./json";
 import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
-import type { BunRequest } from "bun";
+import { type BunRequest } from "bun";
 
 export async function handlerVideoMetaCreate(cfg: ApiConfig, req: Request) {
   const token = getBearerToken(req.headers);
@@ -65,3 +65,51 @@ export async function handlerVideosRetrieve(cfg: ApiConfig, req: Request) {
   const videos = getVideos(cfg.db, userID);
   return respondWithJSON(200, videos);
 }
+
+export const getVideoAspectRatio = async (filePath: string): Promise<string> => {
+  const proc = Bun.spawn([
+    "ffprobe",
+    "-v",
+    "error",
+    "-select_streams",
+    "v:0",
+    "-show_entries",
+    "stream=width,height",
+    "-of",
+    "json",
+    filePath,
+  ],
+
+ {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+
+  var stdoutText = await new Response(proc.stdout).text();
+  const stderrText = await new Response(proc.stderr).text();
+
+  const exitCode = await proc.exited;
+  console.log("exit code ",exitCode)
+
+  if (exitCode !== 0) {
+    throw new Error(
+      `Something went wrong in processing the video: ${stderrText}`,
+    );
+  }
+
+  const { streams } = JSON.parse(stdoutText);
+  const { width, height } = streams[0];
+
+  const ratio = Math.floor(width / height);
+
+  if (ratio > 1) {
+    return "landscape";
+  }
+
+  if (ratio < 1) {
+    return "portrait";
+  }
+
+  return "other";
+};
