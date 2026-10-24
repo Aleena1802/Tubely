@@ -113,3 +113,36 @@ export const getVideoAspectRatio = async (filePath: string): Promise<string> => 
 
   return "other";
 };
+
+export const processVideoForFastStart=async(inputFilePath:string)=>{
+  const outputFilePath=inputFilePath + ".processed";
+
+    const proc = Bun.spawn([
+    "ffmpeg",
+    "-i",
+    inputFilePath,
+    "-movflags",
+    "faststart",
+    "-map_metadata",
+    "0",
+    "-codec",
+    "copy",
+    "-f",
+    "mp4",
+    outputFilePath
+  ]);
+
+const exitCode = await proc.exited;
+const stderrText = await new Response(proc.stderr).text();
+
+
+  if (exitCode !== 0) {
+    throw new Error(
+      `Something went wrong in processing the video: ${stderrText}`,
+    );
+  }
+
+  return outputFilePath
+
+}
+
